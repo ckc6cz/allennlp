@@ -19,7 +19,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         super().__init__(model, dataset_reader)
         self._tokenizer = SpacyWordSplitter(language=language, pos_tags=True)
 
-    def predict(self, sentence: str) -> JsonDict:
+    def predict(self, sentence: str, verb_labels: list) -> JsonDict:
         """
         Predicts the semantic roles of the supplied sentence and returns a dictionary
         with the results.
@@ -37,14 +37,17 @@ class SemanticRoleLabelerPredictor(Predictor):
         ----------
         sentence, ``str``
             The sentence to parse via semantic role labeling.
+        verb_labels, ``list``
+            A list where all entries are 0 besides the position of the verb 
 
         Returns
         -------
         A dictionary representation of the semantic roles in the sentence.
         """
-        return self.predict_json({"sentence": sentence})
+        return self.predict_json({"sentence": sentence, "verb_labels": verb_labels})
 
-    def predict_tokenized(self, tokenized_sentence: List[str]) -> JsonDict:
+
+    def predict_tokenized(self, tokenized_sentence: List[str], verb_labels: List[int]) -> JsonDict:
         """
         Predicts the semantic roles of the supplied sentence tokens and returns a dictionary
         with the results.
@@ -63,7 +66,7 @@ class SemanticRoleLabelerPredictor(Predictor):
             pipe[1](spacy_doc)
 
         tokens = [token for token in spacy_doc]
-        instances = self.tokens_to_instances(tokens)
+        instances = self.tokens_to_instances(tokens, verb_labels)
 
         if not instances:
             return sanitize({"verbs": [], "words": tokens})
@@ -97,17 +100,16 @@ class SemanticRoleLabelerPredictor(Predictor):
     def _json_to_instance(self, json_dict: JsonDict):
         raise NotImplementedError("The SRL model uses a different API for creating instances.")
 
-    def tokens_to_instances(self, tokens):
+    def tokens_to_instances(self, tokens, verb_labels):
         words = [token.text for token in tokens]
         instances: List[Instance] = []
-        for i, word in enumerate(tokens):
-            verb_labels = [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        #for i, word in enumerate(tokens):
+            #verb_labels = [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
             #if word.pos_ == "VERB":
             #    verb_labels = [0 for _ in words]
             #    verb_labels[i] = 1
-            instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
-            instances.append(instance)
-            
+        instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
+        instances.append(instance)
         return instances
 
     def _sentence_to_srl_instances(self, json_dict: JsonDict) -> List[Instance]:
@@ -130,8 +132,9 @@ class SemanticRoleLabelerPredictor(Predictor):
             One instance per verb.
         """
         sentence = json_dict["sentence"]
+        verb_labels = json_dict["verb_labels"]
         tokens = self._tokenizer.split_words(sentence)
-        return self.tokens_to_instances(tokens)
+        return self.tokens_to_instances(tokens, verb_labels)
 
     @overrides
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
@@ -227,7 +230,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     @overrides
     def predict_json(self, inputs: JsonDict) -> JsonDict:
         """
-        Expects JSON that looks like ``{"sentence": "..."}``
+        Expects JSON that looks like ``{"sentence": "...", "verb_labels": [0,...,0]}``
         and returns JSON that looks like
 
         .. code-block:: js
@@ -241,7 +244,7 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         instances = self._sentence_to_srl_instances(inputs)
 
-        if not instances:
-            return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
+        #if not instances:
+        #    return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
 
         return self.predict_instances(instances)
