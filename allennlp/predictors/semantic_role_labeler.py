@@ -108,6 +108,8 @@ class SemanticRoleLabelerPredictor(Predictor):
             #if word.pos_ == "VERB":
             #    verb_labels = [0 for _ in words]
             #    verb_labels[i] = 1
+        print(tokens)
+        print(verb_labels)
         instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
         instances.append(instance)
         return instances
