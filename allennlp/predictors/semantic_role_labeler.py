@@ -101,11 +101,13 @@ class SemanticRoleLabelerPredictor(Predictor):
         words = [token.text for token in tokens]
         instances: List[Instance] = []
         for i, word in enumerate(tokens):
-            if word.pos_ == "VERB":
-                verb_labels = [0 for _ in words]
-                verb_labels[i] = 1
-                instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
-                instances.append(instance)
+            verb_labels = [0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            #if word.pos_ == "VERB":
+            #    verb_labels = [0 for _ in words]
+            #    verb_labels[i] = 1
+            instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
+            instances.append(instance)
+            
         return instances
 
     def _sentence_to_srl_instances(self, json_dict: JsonDict) -> List[Instance]:
